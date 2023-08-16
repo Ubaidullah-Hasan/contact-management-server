@@ -1,11 +1,13 @@
 const express = require('express')
 const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
+var cors = require('cors')
+
 
 const app = express()
+app.use(cors());
+app.use(express.json())
 const port = process.env.PORT || 4000;
-
-console.log(process.env.DB_password)
 
 
 
@@ -41,10 +43,22 @@ async function run() {
         // contactManage
         // contacts
 
+        const contactCollection = client.db("contactManage").collection("contacts");
 
 
-
-
+        //  *************** contactCollection ***************
+        app.post("/contacts", async(req, res)=>{
+            const userInfo = req.body;
+            console.log(userInfo)
+            const data = {
+                name: userInfo?.name,
+                email: userInfo?.email,
+                phone: userInfo?.number,
+                image: userInfo?.imgURL,
+            }
+            const result = await contactCollection.insertOne(data);
+            res.send(result);
+        })
 
 
 
