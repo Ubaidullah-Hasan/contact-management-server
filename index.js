@@ -78,7 +78,7 @@ async function run() {
 
 
         //  *************** contactCollection ***************
-        app.post("/contacts", async(req, res)=>{
+        app.post("/contacts", async (req, res) => {
             const userInfo = req.body;
             console.log(userInfo)
             const data = {
@@ -92,10 +92,51 @@ async function run() {
             res.send(result);
         })
 
-        app.get("/contacts", async(req, res)=>{
+        app.get("/contacts", async (req, res) => {
             const result = await contactCollection.find().toArray();
             res.send(result);
         })
+
+        app.get("/contacts/search", async (req, res) => {
+            try {
+                const { query } = req.query;
+                // console.log(query);
+
+                if (query) {
+                    const searchResult = await contactCollection.find({
+                        name: { $regex: new RegExp(query, 'i') } // 'i' makes it case-insensitive
+                    }).toArray();
+                    res.send(searchResult);
+                } else {
+                    const searchResult = await contactCollection.find().toArray();
+                    res.send(searchResult);
+                }
+
+            } catch (error) {
+                console.error('Error searching contacts:', error);
+                res.status(500).send({ error: 'Internal server error' });
+            }
+        });
+
+        // total contacts
+        app.get("/contacts/count", async (req, res) => {
+            const totalCount = (await contactCollection.countDocuments());
+            res.json({ totalCount });
+        });
+
+        app.get("/contacts/categories", async (req, res) => {
+            try {
+                const options = {
+                    projection: { category: 1 }
+                };
+                const result = await contactCollection.find({}, options).toArray();
+                res.send(result);
+            } catch (error) {
+                console.error("Error fetching categories:", error);
+                res.status(500).send("Error fetching categories");
+            }
+        });
+
 
         app.put("/contacts/:id", async (req, res) => {
             const id = req.params.id;
@@ -120,7 +161,7 @@ async function run() {
             }
         });
 
-        app.delete("/contacts/:id", async(req, res)=>{
+        app.delete("/contacts/:id", async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const result = await contactCollection.deleteOne(query);
