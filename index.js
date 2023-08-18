@@ -4,7 +4,11 @@ require('dotenv').config();
 var cors = require('cors')
 const jwt = require("jsonwebtoken");
 
-
+const corsConfig = {
+    origin: '*',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
+}
 
 const app = express()
 app.use(cors());
@@ -55,10 +59,8 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
-        // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
+        // await client.connect();
 
         // contactManage
         // contacts
@@ -87,6 +89,7 @@ async function run() {
                 phone: userInfo?.phone,
                 image: userInfo?.image,
                 category: userInfo?.category,
+                timeAt: userInfo?.timeAt,
             }
             const result = await contactCollection.insertOne(data);
             res.send(result);
@@ -202,7 +205,9 @@ async function run() {
 
 
 
-
+        // Send a ping to confirm a successful connection
+        await client.db("admin").command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
     } finally {
         // Ensures that the client will close when you finish/error
