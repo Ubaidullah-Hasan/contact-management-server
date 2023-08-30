@@ -1,18 +1,14 @@
 const express = require('express')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
-var cors = require('cors')
+var cors = require('cors');
 const jwt = require("jsonwebtoken");
+const app = express();
 
-const corsConfig = {
-    origin: '*',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE']
-}
 
-const app = express()
+// middlewire
 app.use(cors());
-app.use(express.json())
+app.use(express.json());
 const port = process.env.PORT || 4000;
 
 
@@ -66,6 +62,7 @@ async function run() {
         // contacts
 
         const contactCollection = client.db("contactManage").collection("contacts");
+        const userCollection = client.db("contactManage").collection("users");
 
 
         // ACCESS KEY JWT START
@@ -76,6 +73,79 @@ async function run() {
         //     res.send({ token });
         // })
         // ACCESS KEY JWT END
+
+
+
+
+        //  *************** userCollection ***************
+        app.post("/users", async (req, res) => {
+            const body = req.body;
+            // console.log(body);
+
+            // chcek user exist
+            const query = { email: body.email };
+            const existingUser = await userCollection.findOne(query);
+
+            if (existingUser) {
+                return res.send({ message: "user already exist!" });
+            }
+
+            const options = {
+                weekday: 'short',   // Example: "Fri"
+                year: 'numeric',    // Example: "2023"
+                month: 'short',     // Example: "Aug"
+                day: 'numeric',     // Example: "25"
+                hour: '2-digit',    // Example: "08"
+                minute: '2-digit',  // Example: "27"
+                second: '2-digit',  // Example: "45"
+                timeZoneName: 'short'  // Example: "GMT+6"
+            };
+
+            const formattedDate = new Date().toLocaleString(undefined, options);
+
+            const userInfo = {
+                firstName: body.firstName,
+                lastName: body.lastName,
+                password: body.password,
+                email: body.email,
+                memberAt: formattedDate,
+                userRole: body.role,
+            };
+
+            const result = await userCollection.insertOne(userInfo);
+            res.send(result);
+        });
+
+        app.get("/users/:email", async(req, res)=>{
+            const email = req.params.email;
+            const query = {email: email};
+            const result = await userCollection.findOne(query);
+            res.send(result);
+        })
+
+        app.put("/users/:email", async(req, res)=>{
+            const email = req.params.email;
+            const body = req.body;
+            console.log(body);
+            const query = {email: email};
+            const person = await userCollection.findOne(query);
+
+            const updateDoc = {
+                $set: {
+                    profileImg: body.image
+                },
+            };
+
+            const options = { upsert: true };
+            const result = await userCollection.updateOne(person, updateDoc, options);
+            res.send(result);
+        })
+
+
+
+
+
+
 
 
 
@@ -121,11 +191,7 @@ async function run() {
             }
         });
 
-        // total contacts
-        app.get("/contacts/count", async (req, res) => {
-            const totalCount = (await contactCollection.countDocuments());
-            res.json({ totalCount });
-        });
+
 
         app.get("/contacts/categories", async (req, res) => {
             try {
@@ -143,7 +209,7 @@ async function run() {
         app.get("/contacts/category/:categoryName", async (req, res) => {
             const { categoryName } = req.params;
             try {
-                if(categoryName === "all"){
+                if (categoryName === "all") {
                     const result = await contactCollection.find({}).toArray();
                     return res.send(result);
                 }
@@ -190,10 +256,15 @@ async function run() {
 
 
 
-
-
-
-
+        //  *************** TOTAL COUNTS ***************
+        app.get("/count", async (req, res) => {
+            const totalContacts = (await contactCollection.countDocuments());
+            const totalUsers = (await userCollection.countDocuments());
+            res.json({
+                totalContacts,
+                totalUsers
+            });
+        });
 
 
 
