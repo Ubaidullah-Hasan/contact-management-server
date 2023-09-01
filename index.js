@@ -63,6 +63,7 @@ async function run() {
 
         const contactCollection = client.db("contactManage").collection("contacts");
         const userCollection = client.db("contactManage").collection("users");
+        const shareCollection = client.db("contactManage").collection("shares");
 
 
         // ACCESS KEY JWT START
@@ -93,7 +94,7 @@ async function run() {
             const options = {
                 weekday: 'short',   // Example: "Fri"
                 year: 'numeric',    // Example: "2023"
-                month: 'short',     // Example: "Aug"
+                month: 'long',     // Example: "August"
                 day: 'numeric',     // Example: "25"
                 hour: '2-digit',    // Example: "08"
                 minute: '2-digit',  // Example: "27"
@@ -104,8 +105,7 @@ async function run() {
             const formattedDate = new Date().toLocaleString(undefined, options);
 
             const userInfo = {
-                firstName: body.firstName,
-                lastName: body.lastName,
+                userName: body.userName,
                 password: body.password,
                 email: body.email,
                 memberAt: formattedDate,
@@ -116,18 +116,36 @@ async function run() {
             res.send(result);
         });
 
-        app.get("/users/:email", async(req, res)=>{
+        app.get("/users/:email", async (req, res) => {
             const email = req.params.email;
-            const query = {email: email};
+            const query = { email: email };
             const result = await userCollection.findOne(query);
             res.send(result);
         })
 
-        app.put("/users/:email", async(req, res)=>{
+        app.get("/users-name-photo", async (req, res) => {
+            const options = {
+                projection: {
+                    userName: 1,
+                    profileImg: 1,
+                    email: 1,
+                },
+            };
+
+            try {
+                const result = await userCollection.find({}, options).toArray();
+                res.json(result);
+            } catch (error) {
+                console.error("Error fetching users:", error);
+                res.status(500).json({ error: "Unable to fetch users" });
+            }
+        });
+
+        app.put("/users/:email", async (req, res) => {
             const email = req.params.email;
             const body = req.body;
             console.log(body);
-            const query = {email: email};
+            const query = { email: email };
             const person = await userCollection.findOne(query);
 
             const updateDoc = {
@@ -140,6 +158,80 @@ async function run() {
             const result = await userCollection.updateOne(person, updateDoc, options);
             res.send(result);
         })
+
+
+
+
+
+
+        //  *************** shareCollection ***************
+
+        // POST route for sharing contacts
+        app.post('/share-contacts', async (req, res) => {
+            const { shareData } = req.body;
+            const { access_type, contact_ids, share_from, share_to } = shareData;
+
+            // Check if a document with the same combination already exists
+            const query = {
+                share_from: share_from,
+                'share_to.email': share_to.email,
+            };
+
+            const options = {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                timeZoneName: 'short'
+            };
+            const formattedDate = new Date().toLocaleString(undefined, options);
+            
+            const existingShare = await shareCollection.findOne(query);
+
+            if (existingShare) {
+                console.log('existingShare ase');
+                // The combination already exists, so update the document
+                const updatedContactIds = [...existingShare.contact_ids, ...contact_ids];
+                const uniqueContactIds = [...new Set(updatedContactIds)]; // Ensure unique contact_ids
+
+                try {
+                    const result = await shareCollection.updateOne(query, {
+                        $set: {
+                            contact_ids: uniqueContactIds,
+                            shareDate: formattedDate,
+                            access_type: access_type
+                        }, // Update contact_ids, shareDate, access_type
+                    });
+
+                    res.send(result);
+                } catch (error) {
+                    console.error("Error updating share:", error);
+                    res.status(500).json({ error: "Unable to update share" });
+                }
+            } else {
+                // The combination doesn't exist, so create a new document
+                console.log("existing share nai");
+
+                const newShare = {
+                    access_type: access_type,
+                    contact_ids: contact_ids, // Store contact_ids as provided
+                    share_from: share_from,
+                    share_to: share_to,
+                    shareDate: formattedDate,
+                };
+
+                try {
+                    const result = await shareCollection.insertOne(newShare);
+                    res.send(result);
+                } catch (error) {
+                    console.error("Error inserting share:", error);
+                    res.status(500).json({ error: "Unable to insert share" });
+                }
+            }
+        });
 
 
 
