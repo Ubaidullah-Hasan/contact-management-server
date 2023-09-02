@@ -233,6 +233,22 @@ async function run() {
             }
         });
 
+        app.get('/share-contacts/:email', async(req, res) => {
+            const email = req.params.email;
+            // console.log(email);
+            
+            const query = {
+                'share_to.email': email,
+            };
+            try{
+                const result = await shareCollection.find(query).toArray();
+                res.send(result);
+            }catch(error) {
+                console.error("Error fetching share-contacts:", error);
+                res.status(500).json({ error: "Unable to insert share" });
+            }
+        });
+
 
 
 
