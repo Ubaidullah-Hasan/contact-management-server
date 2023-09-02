@@ -241,7 +241,7 @@ async function run() {
                 'share_to.email': email,
             };
             try{
-                const result = await shareCollection.find(query).toArray();
+                const result = await shareCollection.findOne(query);
                 res.send(result);
             }catch(error) {
                 console.error("Error fetching share-contacts:", error);
